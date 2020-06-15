@@ -1,0 +1,170 @@
+grammar smitey.Rpgindividual with org.eclipse.xtext.common.Terminals
+
+generate rpgindividual "http://www.Rpgindividual.smitey"
+
+SystemRPG:
+	'game' name=ID declarations+=Declaration*
+;
+	
+Declaration:
+	Locations | Relations | Moves | Entities | Teams | Death | Attributes | Effects
+;
+
+Effects:
+	'effects' effect+=Effect+
+;
+
+Effect:
+	'effect' name=ID rule=Rule
+;
+
+
+Attributes:
+	'attributes' attribute+=Attribute+
+;
+
+Attribute:
+	'attribute' name=ID aVal=AttributeValues
+;
+
+	
+Locations:
+	'location' loc+=Loc+
+;
+
+Loc:
+	name=ID 'opponents' team=[Team]
+;
+
+Relations:
+	'relations' type+=Type+
+;
+
+Type:
+	'type' name=ID tExpression=TypeExpression?
+;
+
+TypeExpression:
+	'strong(' relationStrong=FloatNum '):' strong=[Type] (',' strong2+=[Type])* 'weak(' relationWeak=FloatNum '):' weak=[Type] (',' weak2+=[Type])*
+;
+
+Moves:
+	'moves' move+=Move+
+;
+
+Move:
+	'move' name=ID eType=EType att+=AltAttribute* mEffect+=MEffect+
+;
+
+MEffect:
+	'effect' moveEName=[Effect]
+;
+
+EType:
+	'type' type=[Type]
+;
+
+AttributeValues:
+	'is' (lTypes=LegalType | an=ActualNumbers)
+;
+
+AltAttribute:
+	 'attribute' attribute=[Attribute] av=AttributeValues?
+;
+
+Rule:
+	('if' or=ORcondition 'then')? targetThen=Target targetAtt=[Attribute] 'is' change=('-'|'+') sum=Sum
+;
+
+Entities:
+	'entities' entity+=Entity+
+;
+
+Death:
+	'death' 'when' log=ORcondition
+;
+
+Entity:
+	'entity' name=ID eType=EType att+=AltAttribute* eMoves=EntityMoves
+;
+
+EntityMoves:
+	'move' move+=EntityMoveModifier+
+;
+
+EntityMoveModifier:
+	moveName=[Move]'('moveModification+=EntityMoveMultiplier*')'
+;
+
+EntityMoveMultiplier:
+	attribute=[Attribute] "*" multiplier=Sum
+;
+
+Teams:
+	'teams' team+=Team+
+;
+
+Team:
+	'team' name=ID members=Members
+;
+
+Members:
+	'members' entity+=[Entity]+
+;
+
+ORcondition returns Proposition:
+	ANDcondition ('OR' {Or.left=current} right=ANDcondition)*
+;
+
+ANDcondition returns Proposition:
+	Statement ('AND'{And.left=current} right=Statement)*
+;
+
+Statement returns Proposition:
+	NumberComparing | '(' ORcondition ')'
+;
+
+NumberComparing:
+	left=Sum comp=Comparator right=Sum
+;
+
+Comparator:
+	{Smaller}'<' | {SmallerEq}'<=' | {Eq} '==' | {BiggerEq}'>=' | {Bigger}'>' | {NEq}'!='
+;
+
+Sum:
+	Multiply (('+' {Add.left=current} | '-' {Sub.left=current}) right=Multiply)*
+;
+
+Multiply:
+	AtomicNumber (('*' {Mult.left=current} | '/' {Div.left=current}) right=AtomicNumber)*
+;
+
+AtomicNumber:
+	ActualNumbers | NameAttribute
+;
+
+ActualNumbers:
+	FloatNum | IntNum
+;
+
+NameAttribute:
+	target=Target attribute=[Attribute]
+;
+
+
+IntNum:
+	value=INT
+;
+
+FloatNum:
+	i=INT '.' decimal=INT
+;
+
+Target:
+	'User' | 'Enemy'
+;
+
+LegalType:
+	'Float' | 'Integer'
+;
